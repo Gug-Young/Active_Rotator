@@ -1,6 +1,8 @@
 import To_sim.Kuramoto_AR as KU
 from To_sim.solver import RKHG
+from To_sim.Kuramoto_ARZ import RKHG_Z
 import numpy as np
+
 
 def get_r_sigma(b,theta_random,t,D,omega,N,K,mk,Aij):
     th = len(t)//2
@@ -14,3 +16,16 @@ def get_r_sigma(b,theta_random,t,D,omega,N,K,mk,Aij):
     sigma = np.abs(sigma_phi)
     psi = np.abs(sigma_phi)
     return np.mean(r),sigma
+
+
+def get_r_sigma_Z(b,theta_random,t,D,omega,N,K,mk,Aij):
+    th = len(t)//2
+    Zs = RKHG_Z(KU.Kuramoto_AR,theta_random,t,D, args=(omega,N,K,mk,Aij,b))
+    r = np.abs(Zs[th:])
+    r_m = np.mean(r)
+    r_sm = np.mean(r**2)
+    sigma_phi = np.mean(Zs[th:])
+    sigma = np.abs(sigma_phi)
+    psi = np.angle(sigma_phi)
+    chi = (np.mean(r**2)-sigma**2)*N
+    return r_m,sigma,chi
