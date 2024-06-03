@@ -13,12 +13,13 @@ def RKHG_Z(f,y0,t,D,args=()):
     h = t[1] - t[0]
     sh = np.sqrt(h)
     zs = np.zeros(n,dtype=np.complex64)
+    DD = np.sqrt(2*D)
     zs[0] = get_Z(y0)
     for i in range(n - 1):
         S = np.random.choice(np.array([-1,1]),size=size)
         dW = np.random.normal(0,sh,size)
-        k1 = h*f(y0,t[i],*args) + (dW - S*sh)*D*2
-        k2 = h*f(y0+k1,t[i]+h,*args) + (dW + S*sh)*D*2
+        k1 = h*f(y0,t[i],*args) + (dW - S*sh)*DD
+        k2 = h*f(y0+k1,t[i]+h,*args) + (dW + S*sh)*DD
         y0 = y0 + 0.5*(k1+k2)
         zs[i+1] = get_Z(y0)
     return zs
