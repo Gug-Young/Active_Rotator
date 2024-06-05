@@ -30,8 +30,33 @@ def get_r_sigma_Z(b,theta_random,t,D,omega,N,K,mk,Aij):
     chi = (r_sm-sigma**2)*N
     return r_m,sigma,chi
 
+def get_r_sigma_Z_D(D,theta_random,t,b,omega,N,K,mk,Aij):
+    th = len(t)//2
+    Zs = RKHG_Z(KU.Kuramoto_AR,theta_random,t,D, args=(omega,N,K,mk,Aij,b))
+    r = np.abs(Zs[th:])
+    r_m = np.mean(r)
+    r_sm = np.mean(r**2)
+    sigma_phi = np.mean(Zs[th:])
+    sigma = np.abs(sigma_phi)
+    psi = np.angle(sigma_phi)
+    chi = (r_sm-sigma**2)*N
+    return r_m,sigma,chi
+
 
 def get_r_sigma_Z_MF(b,theta_random,t,D,omega,N,K):
+    th = len(t)//2
+    # Zs = RKHG_Z(KU.Kuramoto_mf_AR,theta_random,t,D, args=(omega,N,K,b))
+    Zs = RKHG_Z(KU.Kuramoto_mf_AR,theta_random,t,D, args=(omega,N,K,b))
+    r = np.abs(Zs[th:])
+    r_m = np.mean(r)
+    r_sm = np.mean(r**2)
+    sigma_phi = np.mean(Zs[th:])
+    sigma = np.abs(sigma_phi)
+    psi = np.angle(sigma_phi)
+    chi = (r_sm-sigma**2)*N
+    return r_m,sigma,chi
+
+def get_r_sigma_Z_MF_D(D,theta_random,t,b,omega,N,K):
     th = len(t)//2
     # Zs = RKHG_Z(KU.Kuramoto_mf_AR,theta_random,t,D, args=(omega,N,K,b))
     Zs = RKHG_Z(KU.Kuramoto_mf_AR,theta_random,t,D, args=(omega,N,K,b))
