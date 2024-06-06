@@ -1,1 +1,3 @@
 db=0.02.npz
+*.pickle
+To_sim/__pycache__/*
