@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numba import jit
 from scipy import stats
+from scipy.integrate import cumtrapz
+from scipy.interpolate import interp1d
+
 
 @jit(nopython=True)
 def RK4_ZZ(f, y0, t, args=()):
@@ -120,6 +123,35 @@ def _vectorize_float(f):
 
     return wrapper
 
+def dist_ab(x, a, b, eta):
+    a_ = a*np.exp(1j*x)/(1-a*np.exp(1j*x))
+    b_ = b*np.exp(1j*x)/(1-b*np.exp(1j*x))
+    f1 = 1/(2*np.pi) * (1+ (a_+a_.conjugate()))
+    f2 = 1/(2*np.pi) * (1+ (b_+b_.conjugate()))
+    f = (1+eta)/2 *f1+ (1-eta)/2 *f2
+    return abs(f)
+
+
+def gen_dist(N,a,b,eta):
+    x = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
+    pdf = dist_ab(x,a,b,eta)
+    cdf = cumtrapz(pdf, x, initial=0)
+    cdf /= cdf[-1]  # 정규화
+    quantile_func = interp1d(cdf, x, kind='nearest', fill_value='extrapolate')
+
+    ps = (np.arange(N+1)[:-1] + 1)/(N+1)
+    T = quantile_func(ps)
+    return T
+
+def gen_dist2(N,a,b,eta):
+    xs = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
+    f_ab = dist_ab(xs,a,b,eta)
+    f_ab /=np.sum(f_ab)
+    u = np.linspace(0,1,N+2,endpoint=True)[1:-1]
+    L = np.cumsum(f_ab)
+    idx = np.searchsorted(L,u)
+    return xs[idx]
+
 
 class MixtureDistribution:
     def __init__(self, distributions, weights):
@@ -231,6 +263,26 @@ def dZ_dt(Zs,t,alpha,beta,eta1,eta2):
     db2 = 1/2 *(np.conj(H2)*np.conj(b2)*np.exp(1j*alpha) - H2*b2**3*np.exp(-1j*alpha) )
     return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
 
+@jit(nopython=True)
+def dZ2_dt(Zs,t,alpha,beta,eta1,eta2):
+    a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs
+    a1 = a1real + 1j*a1imag
+    a2 = a2real + 1j*a2imag
+    b1 = b1real + 1j*b1imag
+    b2 = b2real + 1j*b2imag
+    Z11 = 1/2 * (np.conj(a1)+np.conj(b1)) + eta1/2 * (np.conj(a1)-np.conj(b1))
+    Z12 = 1/2 * (np.conj(a2)+np.conj(b2)) + eta2/2 * (np.conj(a2)-np.conj(b2))
+    H1 = (Z11**2 + 2*beta*Z11*Z12 + beta**2*Z12**2)
+    H2 = (Z12**2 + 2*beta*Z11*Z12 + beta**2*Z11**2)
+    
+    da1 = 1/2 *(np.conj(H1)/a1*np.exp(1j*alpha) - H1*a1**3*np.exp(-1j*alpha) )
+    db1 = 1/2 *(np.conj(H1)/b1*np.exp(1j*alpha) - H1*b1**3*np.exp(-1j*alpha) )
+    da2 = 1/2 *(np.conj(H2)/a2*np.exp(1j*alpha) - H2*a2**3*np.exp(-1j*alpha) )
+    db2 = 1/2 *(np.conj(H2)/b2*np.exp(1j*alpha) - H2*b2**3*np.exp(-1j*alpha) )
+    return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
+
+
+
 def to_complex(Zs):
     a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs.T
     a1 = a1real + 1j*a1imag
@@ -239,12 +291,12 @@ def to_complex(Zs):
     b2 = b2real + 1j*b2imag
     return a1,b1,a2,b2
 
-def get_RQ_MOA(Q1,Q2,alpha,beta,eta1,eta2,t_end = 5000):
+def get_RQ_MOA(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
     A1 = Q1
     A2 = np.sqrt(Q2)
     a1 =  A1 *np.exp(0j)
     b1 =  a1 * np.exp(np.pi*1j)
-    a2 =  A2*np.exp(0j)
+    a2 =  A2*np.exp(shift*1j)
     b2 =  a2* np.exp(np.pi*1j)
 
 
@@ -264,6 +316,32 @@ def get_RQ_MOA(Q1,Q2,alpha,beta,eta1,eta2,t_end = 5000):
     return R1s,R2s,Q1s,Q2s,t
 
 
+def get_RQ_MOA2(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
+    A1 = Q1
+    A2 = np.sqrt(Q2)
+    a1 =  A1 *np.exp(0j)
+    b1 =  a1 * np.exp(np.pi*1j)
+    a2 =  A2*np.exp(shift*1j)
+    b2 =  a2* np.exp(np.pi*1j)
+
+
+    t = np.arange(0,t_end,0.1)
+    Zs = RK4(dZ2_dt,np.array([a1.real,a1.imag,b1.real,b1.imag,a2.real,a2.imag,b2.real,b2.imag]),t,args=(alpha,beta,eta1,eta2))
+    a1s,b1s,a2s,b2s = to_complex(Zs)
+
+    RZ1 = 1/2 * (np.conj(a1s)+np.conj(b1s)) + eta1/2 * (np.conj(a1s)-np.conj(b1s))
+    QZ1 = 1/2 * (np.conj(a1s)**2+np.conj(b1s)**2) + eta1/2 * (np.conj(a1s)**2-np.conj(b1s)**2)
+    RZ2 = 1/2 * (np.conj(a2s)+np.conj(b2s)) + eta2/2 * (np.conj(a2s)-np.conj(b2s))
+    QZ2 = 1/2 * (np.conj(a2s)**2+np.conj(b2s)**2) + eta2/2 * (np.conj(a2s)**2-np.conj(b2s)**2)
+
+    R1s = np.abs(RZ1)
+    R2s = np.abs(RZ2)
+    Q1s = np.abs(QZ1)
+    Q2s = np.abs(QZ2)
+    return R1s,R2s,Q1s,Q2s,t
+
+
+
 def get_R_simul(N,eta1,eta2,alpha,beta,t_end = 5000):
     N1 = N2 = N
     Theta = get_m1_m2(N,eta1,eta2)
@@ -273,4 +351,67 @@ def get_R_simul(N,eta1,eta2,alpha,beta,t_end = 5000):
     R2_S = np.abs(Z1bs)
     Q1_S = np.abs(Z2as)
     Q2_S = np.abs(Z2bs)
+    return R1_S,R2_S,Q1_S,Q2_S,t
+
+
+
+def get_R_simul_wf(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
+    N1 = N2 = N
+    A1 = np.sqrt(Q1)
+    A2 = np.sqrt(Q2)
+    a1 =  A1 *np.exp(0j)
+    b1 =  a1 * np.exp(np.pi*1j)
+    a2 =  A2*np.exp(shift*1j)
+    b2 =  a2* np.exp(np.pi*1j)
+    T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
+    T2 = gen_dist(N,a2,b2,eta2)
+    Theta =  np.r_[T1,T2]
+    t = np.arange(0,t_end,0.1)
+    thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
+    R1_S = np.abs(Z1as)
+    R2_S = np.abs(Z1bs)
+    Q1_S = np.abs(Z2as)
+    Q2_S = np.abs(Z2bs)
+    return R1_S,R2_S,Q1_S,Q2_S,t
+
+
+
+def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
+    N1 = N2 = N
+    A1 = np.sqrt(Q1)
+    A2 = np.sqrt(Q2)
+    a1 =  A1 *np.exp(0j)
+    b1 =  a1 * np.exp(np.pi*1j)
+    a2 =  A2*np.exp(shift*1j)
+    b2 =  a2* np.exp(np.pi*1j)
+    T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
+    T2 = gen_dist(N,a2,b2,eta2)
+    Theta =  np.r_[T1,T2]
+    t = np.arange(0,t_end,0.1)
+    thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
+    R1_S = np.abs(Z1as)
+    R2_S = np.abs(Z1bs)
+    Q1_S = np.abs(Z2as)
+    Q2_S = np.abs(Z2bs)
+    return R1_S,R2_S,Q1_S,Q2_S,t,thetas
+
+
+
+def get_R_simul_wf2(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
+    N1 = N2 = N
+    A1 = np.sqrt(Q1)
+    A2 = np.sqrt(Q2)
+    a1 =  A1 *np.exp(0j)
+    b1 =  a1 * np.exp(np.pi*1j)
+    a2 =  A2*np.exp(shift*1j)
+    b2 =  a2* np.exp(np.pi*1j)
+    T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
+    T2 = gen_dist2(N,a2,b2,eta2)
+    Theta =  np.r_[T1,T2]
+    t = np.arange(0,t_end,0.1)
+    Z1as,Z1bs,Z2as,Z2bs = RK4_ZZ2(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
+    R1_S = np.abs(Z1as[::1000])
+    R2_S = np.abs(Z1bs[::1000])
+    Q1_S = np.abs(Z2as[::1000])
+    Q2_S = np.abs(Z2bs[::1000])
     return R1_S,R2_S,Q1_S,Q2_S,t
