@@ -132,16 +132,21 @@ def dist_ab(x, a, b, eta):
     return abs(f)
 
 
-def gen_dist(N,a,b,eta):
+def gen_dist(N,a,b,eta,seed = None):
     x = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
     pdf = dist_ab(x,a,b,eta)
     cdf = cumtrapz(pdf, x, initial=0)
     cdf /= cdf[-1]  # 정규화
     quantile_func = interp1d(cdf, x, kind='nearest', fill_value='extrapolate')
-
-    ps = (np.arange(N+1)[:-1] + 1)/(N+1)
+    if seed != None:
+        np.random.seed(seed)
+        ps = np.random.uniform(0,1,N)
+    else:
+        ps = (np.arange(N+1)[:-1] + 1)/(N+1)
     T = quantile_func(ps)
     return T
+
+
 
 def gen_dist2(N,a,b,eta):
     xs = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
@@ -376,7 +381,7 @@ def get_R_simul_wf(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
 
 
 
-def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
+def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000, seed = None):
     N1 = N2 = N
     A1 = np.sqrt(Q1)
     A2 = np.sqrt(Q2)
@@ -385,7 +390,7 @@ def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
     a2 =  A2*np.exp(shift*1j)
     b2 =  a2* np.exp(np.pi*1j)
     T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
-    T2 = gen_dist(N,a2,b2,eta2)
+    T2 = gen_dist(N,a2,b2,eta2,seed = seed)
     Theta =  np.r_[T1,T2]
     t = np.arange(0,t_end,0.1)
     thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
