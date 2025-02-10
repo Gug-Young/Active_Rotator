@@ -307,7 +307,23 @@ def dZ2_dt(Zs,t,alpha,beta,eta1,eta2):
     db2 = 1/2 *(np.conj(H2)/b2*np.exp(1j*alpha) - H2*b2**3*np.exp(-1j*alpha) )
     return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
 
-
+@jit(nopython=True)
+def dZ3_dt(Zs,t,alpha,beta,eta1,eta2):
+    a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs
+    a1 = a1real + 1j*a1imag
+    a2 = a2real + 1j*a2imag
+    b1 = b1real + 1j*b1imag
+    b2 = b2real + 1j*b2imag
+    Z11 = np.conj(a1)
+    Z12 = np.conj(a2)
+    H1 = (Z11**2 + 2*beta*Z11*Z12 + beta**2*Z12**2)
+    H2 = (Z12**2 + 2*beta*Z11*Z12 + beta**2*Z11**2)
+    
+    da1 = 1/2 *(np.conj(H1)*np.conj(a1)*np.exp(1j*alpha) - H1*a1**3*np.exp(-1j*alpha) )
+    db1 = (np.conj(H1)*np.exp(1j*alpha) - H1*b1**2*np.exp(-1j*alpha) )
+    da2 = 1/2 *(np.conj(H2)*np.conj(a2)*np.exp(1j*alpha) - H2*a2**3*np.exp(-1j*alpha) )
+    db2 = (np.conj(H2)*np.exp(1j*alpha) - H2*b2**2*np.exp(-1j*alpha) )
+    return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
 
 def to_complex(Zs):
     a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs.T
@@ -460,3 +476,24 @@ def get_R_sim_pert(Q2,N,eta1,eps,alpha,beta,pertb='r',shift=0,t_end = 5000, seed
     Q2_S = np.abs(Z2bs)
     return R1_S,R2_S,Q1_S,Q2_S,t,thetas
 
+def get_RQ_MOA3(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000,dt=0.1):
+    a1 =  eta1*np.sqrt(Q1)*np.exp(0j)
+    b1 =  Q1*np.exp(0j)
+    a2 =  eta1*np.sqrt(Q2)*np.exp(0j)
+    b2 =  Q2*np.exp(0j)
+
+
+    t = np.arange(0,t_end,dt)
+    Zs = RK4(dZ3_dt,np.array([a1.real,a1.imag,b1.real,b1.imag,a2.real,a2.imag,b2.real,b2.imag]),t,args=(alpha,beta,eta1,eta2))
+    a1s,b1s,a2s,b2s = to_complex(Zs)
+
+    RZ1 = eta1*np.conj(a1s)
+    QZ1 = np.conj(b1s)
+    RZ2 = eta2*np.conj(a2s)
+    QZ2 = np.conj(b2s)
+
+    R1s = np.abs(RZ1)
+    R2s = np.abs(RZ2)
+    Q1s = np.abs(QZ1)
+    Q2s = np.abs(QZ2)
+    return R1s,R2s,Q1s,Q2s,t
