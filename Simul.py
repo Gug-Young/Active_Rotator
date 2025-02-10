@@ -158,6 +158,27 @@ def gen_dist2(N,a,b,eta):
     return xs[idx]
 
 
+def gen_dist_pert_r(N,Q,eps):
+    xs = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
+    f_r = 1/(2*np.pi) * (1-Q**2) / (1-2*Q*np.cos(2*xs) + Q**2) + eps/(np.pi) * np.cos(xs)
+    f_r /=np.sum(f_r)
+    u = np.linspace(0,1,N+2,endpoint=True)[1:-1]
+    L = np.cumsum(f_r)
+    idx = np.searchsorted(L,u)
+    return xs[idx]
+
+
+def gen_dist_pert_q(N,Q,eps):
+    xs = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
+    f_r = 1/(2*np.pi) * (1-Q**2) / (1-2*Q*np.cos(2*xs) + Q**2) - eps/(np.pi) * np.cos(2*xs)
+    f_r /=np.sum(f_r)
+    u = np.linspace(0,1,N+2,endpoint=True)[1:-1]
+    L = np.cumsum(f_r)
+    idx = np.searchsorted(L,u)
+    return xs[idx]
+
+
+
 class MixtureDistribution:
     def __init__(self, distributions, weights):
         self._distributions = list(distributions)
@@ -420,3 +441,22 @@ def get_R_simul_wf2(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
     Q1_S = np.abs(Z2as[::1000])
     Q2_S = np.abs(Z2bs[::1000])
     return R1_S,R2_S,Q1_S,Q2_S,t
+
+
+
+def get_R_sim_pert(Q2,N,eta1,eps,alpha,beta,pertb='r',shift=0,t_end = 5000, seed = None):
+    N1 = N2 = N
+    T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
+    if pertb == 'r':
+        T2 = gen_dist_pert_r(N,Q2,eps)
+    else:
+        T2 = gen_dist_pert_q(N,Q2,eps)
+    Theta =  np.r_[T1,T2]
+    t = np.arange(0,t_end,0.1)
+    thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
+    R1_S = np.abs(Z1as)
+    R2_S = np.abs(Z1bs)
+    Q1_S = np.abs(Z2as)
+    Q2_S = np.abs(Z2bs)
+    return R1_S,R2_S,Q1_S,Q2_S,t,thetas
+
