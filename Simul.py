@@ -342,7 +342,7 @@ def get_RQ_MOA(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
     return R1s,R2s,Q1s,Q2s,t
 
 
-def get_RQ_MOA2(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
+def get_RQ_MOA2(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000,dt=0.1):
     A1 = Q1
     A2 = np.sqrt(Q2)
     a1 =  A1 *np.exp(0j)
@@ -351,7 +351,7 @@ def get_RQ_MOA2(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
     b2 =  a2* np.exp(np.pi*1j)
 
 
-    t = np.arange(0,t_end,0.1)
+    t = np.arange(0,t_end,dt)
     Zs = RK4(dZ2_dt,np.array([a1.real,a1.imag,b1.real,b1.imag,a2.real,a2.imag,b2.real,b2.imag]),t,args=(alpha,beta,eta1,eta2))
     a1s,b1s,a2s,b2s = to_complex(Zs)
 
@@ -368,10 +368,10 @@ def get_RQ_MOA2(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000):
 
 
 
-def get_R_simul(N,eta1,eta2,alpha,beta,t_end = 5000):
+def get_R_simul(N,eta1,eta2,alpha,beta,t_end = 5000,dt=0.1):
     N1 = N2 = N
     Theta = get_m1_m2(N,eta1,eta2)
-    t = np.arange(0,t_end,0.1)
+    t = np.arange(0,t_end,dt)
     thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
     R1_S = np.abs(Z1as)
     R2_S = np.abs(Z1bs)
@@ -402,7 +402,7 @@ def get_R_simul_wf(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
 
 
 
-def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000, seed = None):
+def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000,dt=0.1, seed = None):
     N1 = N2 = N
     A1 = np.sqrt(Q1)
     A2 = np.sqrt(Q2)
@@ -413,7 +413,7 @@ def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000, seed = No
     T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
     T2 = gen_dist(N,a2,b2,eta2,seed = seed)
     Theta =  np.r_[T1,T2]
-    t = np.arange(0,t_end,0.1)
+    t = np.arange(0,t_end,dt)
     thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
     R1_S = np.abs(Z1as)
     R2_S = np.abs(Z1bs)
