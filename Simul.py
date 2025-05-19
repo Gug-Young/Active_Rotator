@@ -325,6 +325,55 @@ def dZ3_dt(Zs,t,alpha,beta,eta1,eta2):
     db2 = (np.conj(H2)*np.exp(1j*alpha) - H2*b2**2*np.exp(-1j*alpha) )
     return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
 
+# Use OA ansatz
+@jit(nopython=True)
+def dZ4_dt(Zs,t,alpha,beta,eta1,eta2):
+    a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs
+    a1 = a1real + 1j*a1imag
+    a2 = a2real + 1j*a2imag
+    b1 = b1real + 1j*b1imag
+    b2 = b2real + 1j*b2imag
+    
+    
+    Z11 = eta1 * np.conj(a1)
+    Z12 = eta2 * np.conj(a2)
+    
+    H1 = (Z11**2 + 2*beta*Z11*Z12 + beta**2*Z12**2)
+    H2 = (Z12**2 + 2*beta*Z11*Z12 + beta**2*Z11**2)
+    A = np.exp(1j*alpha)
+    AS = np.exp(-1j*alpha)
+    da1 = 1/2 *(np.conj(H1)/a1*A - H1*a1**3*AS )
+    da2 = 1/2 *(np.conj(H2)/a2*A - H2*a2**3*AS )
+    db1 = 1/2 *(np.conj(H1)/b1*A - H1*a1**3*AS )
+    db2 = 1/2 *(np.conj(H2)/b2*A - H2*a2**3*AS )
+    
+    return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
+# Use OA ansatz
+@jit(nopython=True)
+def dZ5_dt(Zs,t,alpha,beta,eta1,eta2):
+    a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs
+    a1 = a1real + 1j*a1imag
+    a2 = a2real + 1j*a2imag
+    b1 = b1real + 1j*b1imag
+    b2 = b2real + 1j*b2imag
+    
+    
+    Z11 = eta1 * np.conj(a1)
+    Z12 = eta2 * np.conj(a2)
+    
+    H1 = (Z11**2 + 2*beta*Z11*Z12 + beta**2*Z12**2)
+    H2 = (Z12**2 + 2*beta*Z11*Z12 + beta**2*Z11**2)
+    A = np.exp(1j*alpha)
+    AS = np.exp(-1j*alpha)
+    da1 = 1/2 *(np.conj(H1)*np.conj(a1)*A - H1*a1**3*AS )
+    da2 = 1/2 *(np.conj(H2)*np.conj(a2)*A - H2*a2**3*AS )
+    db1 = 1/2 *(np.conj(H1)/b1*A - H1*a1**3*AS )
+    db2 = 1/2 *(np.conj(H2)/b2*A - H2*a2**3*AS )
+    
+    return np.array([da1.real,da1.imag, db1.real,db1.imag, da2.real,da2.imag, db2.real,db2.imag])
+
+
+
 def to_complex(Zs):
     a1real,a1imag,b1real,b1imag,a2real,a2imag,b2real,b2imag = Zs.T
     a1 = a1real + 1j*a1imag
@@ -491,6 +540,51 @@ def get_RQ_MOA3(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000,dt=0.1):
     QZ1 = np.conj(b1s)
     RZ2 = eta2*np.conj(a2s)
     QZ2 = np.conj(b2s)
+
+    R1s = np.abs(RZ1)
+    R2s = np.abs(RZ2)
+    Q1s = np.abs(QZ1)
+    Q2s = np.abs(QZ2)
+    return R1s,R2s,Q1s,Q2s,t
+
+
+def get_RQ_MOA4(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000,dt=0.1):
+    a1 =  np.sqrt(Q1)*np.exp(0j)
+    b1 =  np.sqrt(Q1)*np.exp(0j)
+    a2 =  np.sqrt(Q2)*np.exp(0j)
+    b2 =  np.sqrt(Q2)*np.exp(0j)
+
+
+    t = np.arange(0,t_end,dt)
+    Zs = RK4(dZ4_dt,np.array([a1.real,a1.imag,b1.real,b1.imag,a2.real,a2.imag,b2.real,b2.imag]),t,args=(alpha,beta,eta1,eta2))
+    a1s,b1s,a2s,b2s = to_complex(Zs)
+
+    RZ1 = eta1*np.conj(a1s)
+    QZ1 = np.conj(b1s)**2
+    RZ2 = eta2*np.conj(a2s)
+    QZ2 = np.conj(b2s)**2
+
+    R1s = np.abs(RZ1)
+    R2s = np.abs(RZ2)
+    Q1s = np.abs(QZ1)
+    Q2s = np.abs(QZ2)
+    return R1s,R2s,Q1s,Q2s,t
+
+def get_RQ_MOA5(Q1,Q2,alpha,beta,eta1,eta2,shift=0,t_end = 5000,dt=0.1):
+    a1 =  np.sqrt(Q1)*np.exp(0j)
+    b1 =  np.sqrt(Q1)*np.exp(0j)
+    a2 =  np.sqrt(Q2)*np.exp(0j)
+    b2 =  np.sqrt(Q2)*np.exp(0j)
+
+
+    t = np.arange(0,t_end,dt)
+    Zs = RK4(dZ5_dt,np.array([a1.real,a1.imag,b1.real,b1.imag,a2.real,a2.imag,b2.real,b2.imag]),t,args=(alpha,beta,eta1,eta2))
+    a1s,b1s,a2s,b2s = to_complex(Zs)
+
+    RZ1 = eta1*np.conj(a1s)
+    QZ1 = np.conj(b1s)**2
+    RZ2 = eta2*np.conj(a2s)
+    QZ2 = np.conj(b2s)**2
 
     R1s = np.abs(RZ1)
     R2s = np.abs(RZ2)
