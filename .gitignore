@@ -3,3 +3,4 @@ db=0.02.npz
 To_sim/__pycache__/*
 *.pyc
 */__pycache__/*
+N = 10000 Simulation result.npz
