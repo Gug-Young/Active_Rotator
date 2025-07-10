@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numba import jit
 from scipy import stats
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 from scipy.interpolate import interp1d
 
 
@@ -135,7 +135,7 @@ def dist_ab(x, a, b, eta):
 def gen_dist(N,a,b,eta,seed = None):
     x = np.linspace(-np.pi/2, 3*np.pi/2, 10000)
     pdf = dist_ab(x,a,b,eta)
-    cdf = cumtrapz(pdf, x, initial=0)
+    cdf = cumulative_trapezoid(pdf, x, initial=0)
     cdf /= cdf[-1]  # 정규화
     quantile_func = interp1d(cdf, x, kind='nearest', fill_value='extrapolate')
     if seed != None:
