@@ -48,4 +48,8 @@ $$
 
 ![](PASTE_IMAGE/2025-07-21-17-14-24.png)
 $\eta$에 따라서 fixed poin를 나타내면 다음과 같이 나타내게 된다. 각각의 선의 윗부분의 영역에 Fixed point가 존재하며, 아랫 부분에는 fixed ponint가 없다. (있긴 하지만, $\mu<0,\mu>1$인 의미가 없는 영역에서 Fixed point가 생기게 된다.)
+$\eta = \infty$인 경우 $\mu = \sqrt{\sin(\alpha)}$의 라인에서 chimera state가 나눠지며, $\eta$가 감소할수록 해당 영역이 $\mu=0$의 영역으로 줄어 들게 된다.
 
+---
+
+## N = 1000 일 경우 시뮬레이션 하는 결과
