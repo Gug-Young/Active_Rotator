@@ -6,6 +6,51 @@ from scipy.integrate import cumulative_trapezoid
 from scipy.interpolate import interp1d
 
 
+##### generate distribution
+def wrapped_gaussian(theta, mu, sigma):
+    # Number of wrapping terms to include
+    k = np.arange(-3, 4)
+    
+    # Calculate wrapped gaussian
+    f = np.zeros_like(theta)
+    for ki in k:
+        f += np.exp(-(theta - mu + 2*np.pi*ki)**2 / (2*sigma**2))
+    
+    # Normalize
+    f = f / (sigma * np.sqrt(2*np.pi))
+    
+    return f
+
+def bimodal_gaussian_dist(N, eta, Q, seed=None):
+    # 분포 생성을 위한 x 범위 설정
+    x = np.linspace(-np.pi/2, 3*np.pi/2, 100000)
+    
+    # 확률밀도함수 계산
+    sigma = np.sqrt(-1/2 * np.log(Q))
+    f1 = wrapped_gaussian(x, 0, sigma)
+    f2 = wrapped_gaussian(x, np.pi, sigma)
+    pdf = eta*f1 + (1-eta)*f2
+    
+    # CDF 계산 및 정규화
+    cdf = np.cumsum(pdf)
+    cdf = cdf/cdf[-1]
+    
+    # 균일 분포에서 샘플링
+    if seed is not None:
+        np.random.seed(seed)
+        u1 = np.random.uniform(0, 0.5, N//2)
+        u2 = 0.5 + u1
+        u = np.r_[u1,u2]
+    else:
+        u = (np.arange(N+1)[:-1] + 1)/(N+1)
+        
+    # CDF의 역함수를 이용해 분포 생성
+    idx = np.searchsorted(cdf, u)
+    theta = x[idx]
+    
+    return theta
+
+
 @jit(nopython=True)
 def RK4_ZZ(f, y0, t, args=()):
     n = len(t)
@@ -506,8 +551,26 @@ def get_R_simul_wfT(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000,dt=0.1, se
     R2_S = np.abs(Z1bs)
     Q1_S = np.abs(Z2as)
     Q2_S = np.abs(Z2bs)
-    return R1_S,R2_S,Q1_S,Q2_S,t,thetas
+    return Z1as,Z1bs,Z2as,Z2bs,t,thetas
 
+def get_R_simul_wfT_gaussian(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000,dt=0.1, seed = None):
+    N1 = N2 = N
+    A1 = np.sqrt(Q1)
+    A2 = np.sqrt(Q2)
+    a1 =  A1 *np.exp(0j)
+    b1 =  a1 * np.exp(np.pi*1j)
+    a2 =  A2*np.exp(shift*1j)
+    b2 =  a2* np.exp(np.pi*1j)
+    T1 = np.r_[np.zeros(int((1/2 + eta1/2)*N)),np.pi* np.ones(N - int((1/2 + eta1/2)*N))]
+    T2 = bimodal_gaussian_dist(N,(1+eta2)/2,Q2,seed = seed)
+    Theta =  np.r_[T1,T2]
+    t = np.arange(0,t_end,dt)
+    thetas,(Z1as,Z1bs,Z2as,Z2bs) = RK4_ZZ(Kuramoto_MF_CHIMERA,Theta.copy(),t,args=(N1,N2,beta,alpha,1))
+    # R1_S = np.abs(Z1as)
+    # R2_S = np.abs(Z1bs)
+    # Q1_S = np.abs(Z2as)
+    # Q2_S = np.abs(Z2bs)
+    return Z1as,Z1bs,Z2as,Z2bs,t,thetas
 
 
 def get_R_simul_wf2(Q1,Q2,N,eta1,eta2,alpha,beta,shift=0,t_end = 5000):
