@@ -4,7 +4,7 @@ wrapped gaussian을 통해서 초기 분포를 형성하며, Order parameter와 
 
 초기 조건은 다음과 같이 구성되어 있다.
 $$
-f = \eta_\sigma f_a + (1-\eta_\sigma) f_b
+f_\sigma = \eta_\sigma f_a + (1-\eta_\sigma) f_b
 $$
 $f_a,f_b$는 각각 0과 pi에 있는 임의의 unimodal한 분포이며 분산은 서로 같다고 가정을 하였으며, $\eta$는 0 혹은 $\pi$중에서 어느 위치에 많이 분포하는 가를 의미한다. $f_a,f_b$의 경우 현제는 가우시안 분포를 사용할 것이다.
 
